@@ -18,14 +18,25 @@ def drawPattern(t, x, y, number, sides, length, color):
         t.lt(360 / number)
     t.end_fill()
 
+def predictiveCircle(t, sides, length):
+    '''Draws a circle that shows the maximum extent of the currently configured shape.'''
+    pos_a = t.pos()
+    t.speed(0)
+    for i in range(sides // 2):
+        t.fd(length)
+        t.lt(360 / sides)
+    radius = t.distance(pos_a)
+    t.goto(pos_a + (0, -radius))
+    t.seth(0)
+    t.down()
+    t.circle(radius)
+    t.up()
+    t.goto(pos_a)
+
 def drawTree(t, scale, x, y):
     #Calculates the multiplier needed for 1x scale to take up 90% of the screen height. 649 is the true height of the tree.
     t.speed(10)
     scale = scale * ((t.screen.window_height() * 0.9) / 649)
-
-    #DEBUG - gets points
-    treeLeaves = []
-    #treeLeaves.append(t.pos())
 
     #Setup
     t.width(5)
@@ -35,7 +46,7 @@ def drawTree(t, scale, x, y):
 
     #Trunk
     t.begin_fill()
-    t.fillcolor(0.4,0.1,0.1)
+    t.fillcolor(102,26,26)
     t.fd(20*scale)
     t.lt(90)
     t.fd(60*scale)
@@ -52,46 +63,33 @@ def drawTree(t, scale, x, y):
     
     #Leaves
     t.begin_fill()
-    t.fillcolor(0,0.6,0)
+    t.fillcolor(0,153,0)
     t.fd(180*scale)
-    treeLeaves.append(t.pos())
     t.lt(120)
     t.fd(240*scale)
-    treeLeaves.append(t.pos())
     t.rt(120)
     t.fd(80*scale)
-    treeLeaves.append(t.pos())
     t.lt(120)
     t.fd(200*scale)
-    treeLeaves.append(t.pos())
     t.rt(120)
     t.fd(60*scale)
-    treeLeaves.append(t.pos())
     t.lt(120)
     t.fd(240*scale)
-    treeLeaves.append(t.pos())
     t.lt(120)
     t.fd(240*scale)
-    treeLeaves.append(t.pos())
     t.lt(120)
     t.fd(60*scale)
-    treeLeaves.append(t.pos())
     t.rt(120)
     t.fd(200*scale)
-    treeLeaves.append(t.pos())
     t.lt(120)
     t.fd(80*scale)
-    treeLeaves.append(t.pos())
     t.rt(120)
     t.fd(240*scale)
-    treeLeaves.append(t.pos())
     t.lt(120)
     t.fd(220*scale)
-    treeLeaves.append(t.pos())
     t.end_fill()
-    print(treeLeaves)
 
-def decorate(t):
+def decorate(t, y):
     while True:
         t.up()
         t.speed(0)
@@ -100,23 +98,40 @@ def decorate(t):
         if stop == "stop":
             break
         t.screen.onscreenclick(None)
-        t.screen.window_height() # DEBUG - to catch if program closes
-        number = getIntInput("number of shapes")
+        y.goto(t.pos())
+        
         sides = getIntInput("number of sides in each shape")
         length = getIntInput("length of sides")
+
+        predictiveCircle(y, sides, length)
+
+        number = getIntInput("number of shapes")
 
         #For random colors - so we don't get ugly looking colors
         colorList = [
         "red", "green", "blue", "yellow", "purple", "cyan", "white"
         ]
 
-        #If you can, try and make this work with tuples
         while True:
             try:
-                color = input("Enter color string (r for random): ")
+                color = input("Enter color string (r for random, c for custom): ")
                 if color == "r":
                     color = colorList[random.randint(0,6)]
                     break
+
+                elif color == "c":
+                    while True:
+                        print("Enter RGB values (max 255):")
+                        color = (
+                            int(input("Red: ")), int(input("Green: ")), int(input("Blue: "))
+                        )
+                        if (color[0] <= 255) and (color[1] <= 255) and (color[2] <= 255):
+                            break
+
+                        else:
+                            print("Invalid color sequence!")
+                    break
+
                 else:
                     t.pencolor(color)
                     break
@@ -125,6 +140,7 @@ def decorate(t):
                 print("Please enter a valid color string!")
 
         t.speed(10)
+        y.clear()
         drawPattern(t, t.xcor(), t.ycor(), number, sides, length, color)
     t.hideturtle()
 
@@ -140,50 +156,17 @@ def getIntInput(message):
 
 def main():
     t = Turtle(shape="turtle")
-    print(t.screen.screensize())
-    print(t.screen.window_height())
+    y = Turtle()
+    y.hideturtle()
+    y.up()
+    t.screen.colormode(255)
 
     #starts from the bottom of the screen with a 5% margin
     start = ((t.screen.window_height() * -0.5) + (t.screen.window_height() * 0.05))
     drawTree(t, 1, 0, start)
-    decorate(t)
+    decorate(t, y)
 
     print("Click the screen to exit.")
     t.screen.exitonclick()
 
 main()
-
-
-
-
-
-
-#Old Code - makes tree by connecting points. Not sure if it really fits the 'spirit' of using Turtle. If re-implemented, will need to make scalable.
-"""
-treeLeaves = [
-    (225,-300),(90,-60),(180,-60),(70,130),(135,130),(0,365),(-135,130),(-70,130),(-180,-60),(-90,-60),(-225,-300)
-    ]
-
-treeTrunk = [
-    (20,-240),(-20,-240),(-20,-300),(20,-300)
-    ]
-
-connectDots(t, treeLeaves, 5, (0,0,0), (0,0.6,0))
-connectDots(t, treeTrunk, 5, (0,0,0), (0.4,0.1,0.1))
-
-def connectDots(t, points, width, pencolor, fillcolor):
-    '''Connects points with a line of customisable color and width, connecting the last point with the first. It then fills the enclosed area with a specified color.'''
-    t.up()
-    t.goto(points[0])
-    t.down()
-    t.width(width)
-    t.pencolor(pencolor)
-    t.begin_fill()
-    t.fillcolor(fillcolor)
-
-    for i in points:
-        t.goto(i)
-
-    t.goto(points[0])
-    t.end_fill()
-"""
