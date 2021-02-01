@@ -1,8 +1,6 @@
 import random
 from turtle import *
 
-sides, length, number = 0, 0, 0
-
 def drawPattern(t, x, y, number, sides, length, color):
     '''Draws a radial pattern of shapes around the point (x,y)'''
     t.up()
@@ -20,6 +18,59 @@ def drawPattern(t, x, y, number, sides, length, color):
         t.lt(360 / number)
     t.end_fill()
 
+def drawCentredSquare(t, scale, color):
+    t.goto(t.pos() - (50*scale,50*scale))
+    t.down()
+    t.begin_fill()
+    t.fillcolor(color)
+    for i in range(4):
+        t.fd(100*scale)
+        t.lt(90)
+    t.end_fill()
+    t.up()
+
+def drawWindow(t, coordTuple, scale):
+    t.up()
+    t.goto(coordTuple)
+    glass = [(22.5*scale,22.5*scale), (22.5*scale,-22.5*scale), (-22.5*scale,22.5*scale), (-22.5*scale,-22.5*scale)]
+    drawCentredSquare(t, scale, "brown")
+    for i in glass:
+        t.goto(coordTuple)
+        t.goto(t.pos() + i)
+        drawCentredSquare(t, 0.35*scale, "cyan")
+
+def drawPresent(t, y, coordTuple, scale):
+    t.up()
+    t.goto(coordTuple)
+    box = [
+        (30*scale,30*scale), (30*scale,-30*scale), (-30*scale,30*scale), (-30*scale,-30*scale)
+        ]
+    drawCentredSquare(t, scale, "red")
+    for i in box:
+        t.goto(i)
+        drawCentredSquare(t, 0.4*scale, "cyan")
+    
+    #Ribbon bows
+    y.showturtle()
+    y.shape("circle")
+    y.fillcolor("red")
+    y.turtlesize(2.75*scale,1.75*scale,1)
+    y.up()
+    y.goto(y.pos() + (15*scale,70*scale))
+    y.rt(20)
+    y.stamp()
+    y.fillcolor("white")
+    y.turtlesize(1.375*scale,0.875*scale,1)
+    y.stamp()
+    y.lt(50)
+    y.goto(y.pos() + (-35*scale,-0*scale))
+    y.fillcolor("red")
+    y.turtlesize(2.75*scale,1.75*scale,1)
+    y.stamp()
+    y.fillcolor("white")
+    y.turtlesize(1.375*scale,0.875*scale,1)
+    y.stamp()
+
 def prediction(t, sides, length):
     '''Finds and returns the radius of the circle needed to fully enclose a pattern.'''
     pos_a = t.pos()
@@ -33,7 +84,7 @@ def prediction(t, sides, length):
 def drawTree(t, scale, x, y):
     #Calculates the multiplier needed for 1x scale to take up 90% of the screen height. 649 is the true height of the tree.
     scale = scale * ((t.screen.window_height() * 0.9) / 649)
-    t.speed(10)
+    t.speed(0) #DEBUG - MUST CHANGE
 
     #Setup
     t.width(5)
@@ -87,7 +138,6 @@ def drawTree(t, scale, x, y):
     t.end_fill()
 
 def decorate(t, y):
-
     #For random colors - so we don't get ugly looking colors
     colorList = [
         "red", "green", "blue", "yellow", "purple", "cyan", "white"
@@ -169,6 +219,33 @@ def getIntInput(message):
             print("Must be a valid integer!")
     return variable
 
+def setupRoom(t):
+    t.speed(10)
+    #Floor
+    hgt = t.screen.window_height()
+    wdt = t.screen.window_width()
+    t.up()
+    t.goto((wdt * -0.5),(hgt * -0.3))
+    t.down()
+    t.begin_fill()
+    t.fillcolor("brown")
+    t.goto((wdt * 0.5),(hgt * -0.3))
+    t.goto((wdt * 0.5),(hgt * -0.5))
+    t.goto((wdt * -0.5),(hgt * -0.5))
+    t.end_fill()
+    #Wall
+    t.goto((wdt * -0.5),(hgt * -0.3))
+    t.begin_fill()
+    t.fillcolor((50,50,70))
+    t.goto((wdt * -0.5),(hgt * 0.5))
+    t.goto((wdt * 0.5),(hgt * 0.5))
+    t.goto((wdt * 0.5),(hgt * -0.3))
+    t.end_fill()
+    #Windows
+    drawWindow(t, (wdt * -0.3, 0), 1)
+    drawWindow(t, (wdt * 0.3, 0), 1)
+
+
 def main():
     t = Turtle(shape="turtle")
     y = Turtle()
@@ -176,10 +253,13 @@ def main():
     y.up()
     t.screen.colormode(255)
 
+    #delay = input("Adjust screen size and then press enter: ") # DEBUG
+
     #starts from the bottom of the screen with a 5% margin
     start = ((t.screen.window_height() * -0.5) + (t.screen.window_height() * 0.05))
+    setupRoom(t)
     drawTree(t, 1, 0, start)
-    decorate(t, y)
+    #decorate(t, y)
 
     print("Click the screen to exit.")
     t.screen.exitonclick()
