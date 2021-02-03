@@ -2,8 +2,7 @@
 #Add more predefined shapes - stars, spirograph
 #Remove debug code
 #Optimise - remove redundant code i.e. multiple instances of setting speed when it hasn't changed
-#Allow floats to be used for scale
-#Make present ribbon and box color mutually exclusive
+#   Possibly remove centred square function and add a generic draw (uncentred) shape function
 
 import random
 from turtle import *
@@ -118,10 +117,9 @@ def drawCentredSquare(t, scale, color):
 def drawPresent(t, coordTuple, box_color, ribbon_color, scale):
     '''Draws a present at the specified position, with the box and a ribbon.'''
     t.up()
+    t.speed(0)
     t.goto(coordTuple)
-    box = [
-        (30*scale,30*scale), (30*scale,-30*scale), (-30*scale,30*scale), (-30*scale,-30*scale)
-        ]
+    box = [(30*scale,30*scale), (30*scale,-30*scale), (-30*scale,30*scale), (-30*scale,-30*scale)]
     drawCentredSquare(t, scale, ribbon_color)
     for i in box:
         t.goto(coordTuple)
@@ -177,21 +175,22 @@ def prediction(t, sides, length):
     t.speed(0) #Returns speed to normal - DEBUG - do not forget to turn down later
     return radius
 
-def getIntInput(message):
+def getInput(message, type):
     while True:
         try:
-            variable = int(input("Enter "+message+": "))
+            if type == "float":
+                variable = float(input("Enter "+message+": "))
+            else:
+                variable = int(input("Enter "+message+": "))
             break
 
         except ValueError:
-            print("Must be a valid integer!")
+            print("Must be a valid",type,"!")
     return variable
 
-def getColorInput(t, message):
+def getColorInput(t, message, repeat):
     #For random colors - so we don't get ugly looking colors
-    colorList = [
-        "red", "green", "blue", "yellow", "purple", "cyan", "white"
-        ]
+    colorList = ["red", "green", "blue", "yellow", "purple", "cyan", "white"]
     while True:
         try:
             color = input("Enter "+str(message)+" color string (r for random, c for custom): ")
@@ -213,11 +212,14 @@ def getColorInput(t, message):
                 break
 
             else:
-                t.pencolor(color) #Tests if color is valid
+                t.fillcolor(color) #Tests if color is valid
                 break
 
         except:
             print("Please enter a valid color string!")
+
+    if color == repeat:
+        color = colorList[random.randint(0,6)]
 
     return color
 
@@ -241,9 +243,9 @@ def decorate(t):
 
                 if select == "present":
                     t.seth(0)
-                    scale = getIntInput("scale")
-                    box_color = getColorInput(t, "box")
-                    ribbon_color = getColorInput(t, "ribbon")
+                    scale = getInput("scale", "float")
+                    box_color = getColorInput(t, "box", None)
+                    ribbon_color = getColorInput(t, "ribbon", box_color)
                     t.screen.onscreenclick(t.goto)
                     t.shape("square")
                     t.turtlesize(5*scale,5*scale,1)
@@ -266,10 +268,10 @@ def decorate(t):
 
         else:
             while True:
-                sides = getIntInput("number of sides in each shape")
-                length = getIntInput("length of sides")
-                number = getIntInput("number of shapes")
-                color = getColorInput(t, "ornament")
+                sides = getInput("number of sides in each shape", "integer")
+                length = getInput("length of sides", "integer")
+                number = getInput("number of shapes", "integer")
+                color = getColorInput(t, "ornament", None)
 
                 t.screen.onscreenclick(t.goto)
                 radius = max(prediction(t, sides, length), 1) #Max function is used as a crash occurs if the turtle stretch factor is too small
@@ -294,9 +296,6 @@ def decorate(t):
 def main():
     t = Turtle(shape="turtle")
     t.screen.colormode(255)
-
-    #delay = input("Adjust screen size and then press enter: ") # DEBUG
-
     #starts from the bottom of the screen with a 5% margin
     start = ((t.screen.window_height() * -0.5) + (t.screen.window_height() * 0.05))
     setupRoom(t)
