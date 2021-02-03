@@ -1,7 +1,15 @@
+#TODO:
+#Add more predefined shapes - stars, spirograph
+#Remove debug code
+#Optimise - remove redundant code i.e. multiple instances of setting speed when it hasn't changed
+#Allow floats to be used for scale
+#Make present ribbon and box color mutually exclusive
+
 import random
 from turtle import *
 
 def setupRoom(t):
+    '''Sets up the room background and draws windows.'''
     t.speed(10)
     #Floor
     hgt = t.screen.window_height()
@@ -28,6 +36,7 @@ def setupRoom(t):
     drawWindow(t, (wdt * 0.3, 0), 1)
 
 def drawWindow(t, coordTuple, scale):
+    '''Draws a window with 4 glass panes.'''
     t.up()
     t.goto(coordTuple)
     glass = [(22.5*scale,22.5*scale), (22.5*scale,-22.5*scale), (-22.5*scale,22.5*scale), (-22.5*scale,-22.5*scale)]
@@ -38,6 +47,7 @@ def drawWindow(t, coordTuple, scale):
         drawCentredSquare(t, 0.35*scale, "cyan")
 
 def drawTree(t, scale, x, y):
+    '''Draws the Christmas tree.'''
     #Calculates the multiplier needed for 1x scale to take up 90% of the screen height. 649 is the true height of the tree.
     scale = scale * ((t.screen.window_height() * 0.9) / 649)
     t.speed(0) #DEBUG - MUST CHANGE
@@ -94,6 +104,7 @@ def drawTree(t, scale, x, y):
     t.end_fill()
 
 def drawCentredSquare(t, scale, color):
+    '''Draws a square centred at the current position.'''
     t.goto(t.pos() - (50*scale,50*scale))
     t.down()
     t.begin_fill()
@@ -104,37 +115,38 @@ def drawCentredSquare(t, scale, color):
     t.end_fill()
     t.up()
 
-def drawPresent(t, y, coordTuple, scale):
+def drawPresent(t, coordTuple, box_color, ribbon_color, scale):
+    '''Draws a present at the specified position, with the box and a ribbon.'''
     t.up()
     t.goto(coordTuple)
     box = [
         (30*scale,30*scale), (30*scale,-30*scale), (-30*scale,30*scale), (-30*scale,-30*scale)
         ]
-    drawCentredSquare(t, scale, "red")
+    drawCentredSquare(t, scale, ribbon_color)
     for i in box:
         t.goto(coordTuple)
         t.goto(t.pos() + i)
-        drawCentredSquare(t, 0.4*scale, "cyan")
-    
+        drawCentredSquare(t, 0.4*scale, box_color)
+
     #Ribbon bows
-    t.seth(0)
+    t.seth(70)
+    t.goto(t.pos() + (65*scale,120*scale))
     t.shape("circle")
-    t.fillcolor("red")
-    t.turtlesize(2.75*scale,1.75*scale,1)
-    t.up()
-    t.goto(t.pos() + (15*scale,70*scale))
-    t.rt(20)
-    t.stamp()
-    t.fillcolor("white")
-    t.turtlesize(1.375*scale,0.875*scale,1)
-    t.stamp()
+    bg_color = (50,50,70) #Wall
+    if t.ycor() < t.screen.window_height() * -0.3:
+        bg_color = "brown" #Floor
+    drawRibbon(t, scale, ribbon_color, bg_color)
     t.lt(50)
-    t.goto(y.pos() + (-35*scale,-0*scale))
-    t.fillcolor("red")
-    t.turtlesize(2.75*scale,1.75*scale,1)
+    t.goto(t.pos() + (-30*scale,-5*scale))
+    drawRibbon(t, scale, ribbon_color, bg_color)
+
+def drawRibbon(t, scale, ribbon_color, bg_color):
+    '''Draws a ribbon at the turtle's current location and heading.'''
+    t.fillcolor(ribbon_color)
+    t.turtlesize(1.75*scale,2.75*scale,1)
     t.stamp()
-    t.fillcolor("white")
-    t.turtlesize(1.375*scale,0.875*scale,1)
+    t.fillcolor(bg_color)
+    t.turtlesize(0.875*scale,1.375*scale,1)
     t.stamp()
 
 def drawPattern(t, x, y, number, sides, length, color):
@@ -157,11 +169,12 @@ def drawPattern(t, x, y, number, sides, length, color):
 def prediction(t, sides, length):
     '''Finds and returns the radius of the circle needed to fully enclose a pattern.'''
     pos_a = t.pos()
-    t.speed(0)
+    t.speed(0) #Instant
     for i in range(sides // 2):
         t.fd(length)
         t.lt(360 / sides)
     radius = t.distance(pos_a)
+    t.speed(0) #Returns speed to normal - DEBUG - do not forget to turn down later
     return radius
 
 def getIntInput(message):
@@ -208,12 +221,12 @@ def getColorInput(t, message):
 
     return color
 
-def decorate(t, y):
+def decorate(t):
+    '''Allows the user to specify an ornament and place it on the screen.'''
     while True:
         t.up()
         t.speed(0)
         t.goto(0,0)
-        y.goto(0,0)
         
         stop = input("Select a predefined shape with \"p\", stop by typing \"exit\" or press any other key to create a custom shape: ")
         if stop == "exit":
@@ -221,18 +234,20 @@ def decorate(t, y):
         elif stop == "p":
             while True:
                 print("Available predefined shapes: \"present\"")
-                select = input("Enter name of predefined shape exactly as shown, or type \"stop\" to exit: ")
+                select = input("Enter name of predefined shape exactly as shown, or type \"back\" to go back: ")
 
-                if select == "stop":
+                if select == "back":
                     break
 
                 if select == "present":
+                    t.seth(0)
                     scale = getIntInput("scale")
                     box_color = getColorInput(t, "box")
                     ribbon_color = getColorInput(t, "ribbon")
                     t.screen.onscreenclick(t.goto)
                     t.shape("square")
-                    t.turtlesize(scale,scale,1)
+                    t.turtlesize(5*scale,5*scale,1)
+                    t.width(1)
                     t.fillcolor(box_color)
                     stop = input("Move the ornament by clicking on the screen.\nType \"stop\" to remake the ornament or type any other key to confirm position: ")
                     
@@ -240,11 +255,11 @@ def decorate(t, y):
                     t.shape("turtle")
                     t.turtlesize(1,1,1)
                     t.speed(10)
-
-                    drawPresent(t, y, t.pos(), scale)
-
-
-
+                    
+                    drawPresent(t, t.pos(), box_color, ribbon_color, scale)
+                    t.shape("turtle")
+                    t.turtlesize(1,1,1)
+                    break
 
                 else:
                     print("No shape of that name!")
@@ -257,18 +272,18 @@ def decorate(t, y):
                 color = getColorInput(t, "ornament")
 
                 t.screen.onscreenclick(t.goto)
-                radius = max(prediction(y, sides, length), 1) #Max function is used as a crash occurs if the turtle stretch factor is too small
+                radius = max(prediction(t, sides, length), 1) #Max function is used as a crash occurs if the turtle stretch factor is too small
                 t.shape("circle")
                 t.turtlesize((radius/10),(radius/10),1)
                 t.fillcolor(color)
 
-                stop = input("Move the ornament by clicking on the screen.\nType \"stop\" to remake the ornament or type any other key to confirm position: ")
+                stop = input("Move the ornament by clicking on the screen.\nType \"back\" to remake the ornament or type any other key to confirm position: ")
 
                 t.screen.onscreenclick(None)
                 t.shape("turtle")
                 t.turtlesize(1,1,1)
 
-                if stop == "stop":
+                if stop == "back":
                     break
                             
                 t.speed(10)
@@ -278,9 +293,6 @@ def decorate(t, y):
 
 def main():
     t = Turtle(shape="turtle")
-    y = Turtle()
-    y.hideturtle()
-    y.up()
     t.screen.colormode(255)
 
     #delay = input("Adjust screen size and then press enter: ") # DEBUG
@@ -289,34 +301,9 @@ def main():
     start = ((t.screen.window_height() * -0.5) + (t.screen.window_height() * 0.05))
     setupRoom(t)
     drawTree(t, 1, 0, start)
-    decorate(t, y)
+    decorate(t)
 
     print("Click the screen to exit.")
     t.screen.exitonclick()
 
 main()
-
-
-
-'''
-y.showturtle()
-    y.shape("circle")
-    y.fillcolor("red")
-    y.turtlesize(2.75*scale,1.75*scale,1)
-    y.up()
-    y.goto(t.pos() + (15*scale,70*scale))
-    y.rt(20)
-    y.stamp()
-    y.fillcolor("white")
-    y.turtlesize(1.375*scale,0.875*scale,1)
-    y.stamp()
-    y.lt(50)
-    y.goto(y.pos() + (-35*scale,-0*scale))
-    y.fillcolor("red")
-    y.turtlesize(2.75*scale,1.75*scale,1)
-    y.stamp()
-    y.fillcolor("white")
-    y.turtlesize(1.375*scale,0.875*scale,1)
-    y.stamp()
-
-'''
