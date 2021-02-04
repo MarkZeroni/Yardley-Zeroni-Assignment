@@ -6,6 +6,7 @@
 
 import random
 from turtle import *
+from math import radians, tan
 
 def setupRoom(t):
     '''Sets up the room background and draws windows.'''
@@ -101,6 +102,7 @@ def drawTree(t, scale, x, y):
     t.lt(120)
     t.fd(220*scale)
     t.end_fill()
+    t.width(1)
 
 def drawCentredSquare(t, scale, color):
     '''Draws a square centred at the current position.'''
@@ -146,6 +148,18 @@ def drawRibbon(t, scale, ribbon_color, bg_color):
     t.fillcolor(bg_color)
     t.turtlesize(0.875*scale,1.375*scale,1)
     t.stamp()
+
+def drawNStar(t, number, length, color):
+    middle = ((length/2) * tan(radians(180/number)))/2 #Finds vertical distance from start to middle
+    t.up()
+    t.goto(t.pos() + (-length/2,middle))
+    t.down()
+    t.begin_fill()
+    t.fillcolor(color)
+    for i in range(number):
+        t.fd(length)
+        t.rt(180-(180/number))
+    t.end_fill()
 
 def drawPattern(t, x, y, number, sides, length, color):
     '''Draws a radial pattern of shapes around the point (x,y)'''
@@ -235,19 +249,19 @@ def decorate(t):
             break
         elif stop == "p":
             while True:
-                print("Available predefined shapes: \"present\"")
+                print("Available predefined shapes: \"present\", \"star\"")
                 select = input("Enter name of predefined shape exactly as shown, or type \"back\" to go back: ")
 
                 if select == "back":
                     break
 
                 if select == "present":
-                    t.seth(0)
                     scale = getInput("scale", "float")
                     box_color = getColorInput(t, "box", None)
                     ribbon_color = getColorInput(t, "ribbon", box_color)
                     t.screen.onscreenclick(t.goto)
                     t.shape("square")
+                    t.seth(0)
                     t.turtlesize(5*scale,5*scale,1)
                     t.width(1)
                     t.fillcolor(box_color)
@@ -261,6 +275,25 @@ def decorate(t):
                     drawPresent(t, t.pos(), box_color, ribbon_color, scale)
                     t.shape("turtle")
                     t.turtlesize(1,1,1)
+                    break
+
+                if select == "star":
+                    length = getInput("width", "integer")
+                    points = getInput("points (must be odd)", "integer")
+                    color = getColorInput(t, "star", None)
+
+                    t.seth(0)
+                    t.shape("circle")
+                    t.turtlesize(length/20,length/20,1)
+                    t.fillcolor(color)
+
+                    t.screen.onscreenclick(t.goto)
+                    stop = input("Move the ornament by clicking on the screen.\nType \"stop\" to remake the ornament or type any other key to confirm position: ")
+                    t.screen.onscreenclick(None)
+                    t.shape("turtle")
+                    t.turtlesize(1,1,1)
+
+                    drawNStar(t, points, length, color)
                     break
 
                 else:
