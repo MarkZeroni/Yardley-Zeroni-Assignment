@@ -1,5 +1,4 @@
 #TODO:
-#Add more predefined shapes - stars, spirograph
 #Remove debug code
 #Optimise - remove redundant code i.e. multiple instances of setting speed when it hasn't changed
 #   Possibly remove centred square function and add a generic draw (uncentred) shape function
@@ -161,6 +160,18 @@ def drawNStar(t, number, length, color):
         t.rt(180-(180/number))
     t.end_fill()
 
+def drawSpirograph(t, scale):
+    t.width(3)
+    t.down()
+    for i in range (6):
+        for colours in ["red", "magenta", "blue", "cyan", "green", "yellow", "white"]:
+            t.color(colours)
+            t.circle(50*scale)
+            t.lt(10)
+    t.width(1)
+    t.up()
+    t.seth(0)
+
 def drawPattern(t, x, y, number, sides, length, color):
     '''Draws a radial pattern of shapes around the point (x,y)'''
     t.up()
@@ -249,7 +260,7 @@ def decorate(t):
             break
         elif stop == "p":
             while True:
-                print("Available predefined shapes: \"present\", \"star\"")
+                print("Available predefined shapes: \"present\", \"star\", \"spirograph\"")
                 select = input("Enter name of predefined shape exactly as shown, or type \"back\" to go back: ")
 
                 if select == "back":
@@ -277,9 +288,15 @@ def decorate(t):
                     t.turtlesize(1,1,1)
                     break
 
-                if select == "star":
+                elif select == "star":
                     length = getInput("width", "integer")
-                    points = getInput("points (must be odd)", "integer")
+                    while True:
+                        points = getInput("points (must be odd and minimum 3)", "integer")
+                        if (points % 2 == 1) and (points >= 3):
+                            break
+                        else:
+                            print("Must be an odd number and be >= 3!")
+                    
                     color = getColorInput(t, "star", None)
 
                     t.seth(0)
@@ -296,8 +313,25 @@ def decorate(t):
                     drawNStar(t, points, length, color)
                     break
 
+                elif select == "spirograph":
+                    scale = getInput("scale", "float")
+                    t.shape("circle")
+                    t.turtlesize(10*scale,10*scale,1)
+
+                    t.screen.onscreenclick(t.goto)
+                    stop = input("Move the ornament by clicking on the screen.\nType \"stop\" to remake the ornament or type any other key to confirm position: ")
+                    t.screen.onscreenclick(None)
+
+                    t.shape("turtle")
+                    t.turtlesize(1,1,1)
+
+                    drawSpirograph(t, scale)
+                    break
+
                 else:
                     print("No shape of that name!")
+                
+                break
 
         else:
             while True:
