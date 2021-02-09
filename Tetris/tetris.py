@@ -2,21 +2,19 @@
 #                       ******   Tetris   ******
 
 ### Instructions ###
-# Left and right arrows move figures accordingly. Up arrow rotates the figure.
-# Down arrow speeds up the figures descent. Escape starts game again. Click "X" to Quit.
+# Left and right arrows move figures accordingly. Up arrow rotates the figure. Press "C" to hold the piece or swap it with the currently held piece.
+# Down arrow speeds up the figures descent. Escape starts game again. Click the "X" to Quit.
 
 #CHANGES TO BE MADE
     #Make pieces come in proper order - DONE
     #Give pieces proper colors - DONE
+    #Next pieces - DONE
+    #Hold pieces - DONE
     #Seperate lines cleared and score
-    #Clearing multiple lines at once gives more score than doing it seperately
     #Pause button
     #High scores
     #Instruction menu
     #Speed up after x score (or blocks placed to award multiple line clears)
-    #Next pieces - Partially done (need to implement graphics)
-    #Hold pieces
-
 
 # Package imports
 import pygame
@@ -25,7 +23,7 @@ import random
 # Defines colors of shapes
 colours = [
     (0,0,0),        #Black - needed to fix bug with teal pieces disappearing
-    (65, 241, 241), #Teal
+    (65, 241, 241), #Teal - if this was first it would be index 0 and thus disappear once placed
     (0, 47, 246),   #Blue
     (238, 158, 0),  #Orange
     (243,237,0),    #Yellow
@@ -63,10 +61,12 @@ class Figure:
 
 class Tetris:
     level = 1
-    x = 100
+    x = 160
     y = 60
     zoom = 20
     figure = None
+    next_figure = None
+    held_figure = None
 
     def __init__(self, height, width):
         self.height = height
@@ -92,8 +92,18 @@ class Tetris:
 
     def next_piece(self):
         global joined_list, count
-        pieces = ["I","J","L","O","S","T","Z"]
-        return pieces[joined_list[count]]
+        piece = joined_list[count]
+        self.next_figure = Figure(12, 1, piece)
+
+    def swap_held_piece(self):
+        if self.held_figure == None:
+            self.held_figure = Figure(-5, 1, self.figure.type)
+            self.new_figure()
+        else:
+            #Current type
+            held_type = self.held_figure.type
+            self.held_figure = Figure(-6, 1, self.figure.type)
+            self.figure = Figure(3, 0, held_type)
 
     def intersects(self):
         intersection = False
@@ -141,7 +151,7 @@ class Tetris:
                     self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
         self.break_lines()
         self.new_figure()
-        print("Next Piece:", self.next_piece())
+        self.next_piece()
         if self.intersects():
             self.state = "gameover"
 
@@ -169,7 +179,7 @@ WHITE = (255, 255, 255)
 GRAY = (128, 128, 128)
 
 # Defines size of the screen
-size = (400, 500)
+size = (520, 500)
 screen = pygame.display.set_mode(size)
 
 pygame.display.set_caption("Tetris - Yardley & Zeroni") # Can remove name if you want I think it's a nice touch
@@ -213,6 +223,8 @@ while not done:
                 game.go_side(1)
             if event.key == pygame.K_SPACE:
                 game.go_space()
+            if event.key == pygame.K_c:
+                game.swap_held_piece()
             if event.key == pygame.K_ESCAPE:
                 game.__init__(20, 10)
                 counter = 0
@@ -230,6 +242,11 @@ while not done:
                 pygame.draw.rect(screen, colours[game.field[i][j]], #Draw a rect with the associated color
                                  [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
 
+    #Held Window
+    pygame.draw.rect(screen, GRAY, [game.x - game.zoom * 6, game.y, game.zoom*4, game.zoom*4], 1)
+    #Next Window
+    pygame.draw.rect(screen, GRAY, [game.x + game.zoom * 12, game.y, game.zoom*4, game.zoom*4], 1)
+
     if game.figure is not None: #Draw figure if it exists
         for i in range(4):
             for j in range(4):
@@ -238,6 +255,26 @@ while not done:
                     pygame.draw.rect(screen, colours[game.figure.color],
                                      [game.x + game.zoom * (j + game.figure.x) + 1,
                                       game.y + game.zoom * (i + game.figure.y) + 1,
+                                      game.zoom - 2, game.zoom - 2])
+
+    if game.next_figure is not None: #Draw next figure if it exists
+        for i in range(4):
+            for j in range(4):
+                p = i * 4 + j   #Go through each square in the figure's 4x4 grid
+                if p in game.next_figure.image():
+                    pygame.draw.rect(screen, colours[game.next_figure.color],
+                                     [game.x + game.zoom * (j + game.next_figure.x) + 1,
+                                      game.y + game.zoom * (i + game.next_figure.y) + 1,
+                                      game.zoom - 2, game.zoom - 2])
+
+    if game.held_figure is not None: #Draw held figure if it exists
+        for i in range(4):
+            for j in range(4):
+                p = i * 4 + j   #Go through each square in the figure's 4x4 grid
+                if p in game.held_figure.image():
+                    pygame.draw.rect(screen, colours[game.held_figure.color],
+                                     [game.x + game.zoom * (j + game.held_figure.x) + 1,
+                                      game.y + game.zoom * (i + game.held_figure.y) + 1,
                                       game.zoom - 2, game.zoom - 2])
 
     font = pygame.font.SysFont('Calibri', 25, True, False)
