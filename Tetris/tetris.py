@@ -10,11 +10,12 @@
     #Give pieces proper colors - DONE
     #Next pieces - DONE
     #Hold pieces - DONE
-    #Seperate lines cleared and score
+    #Speed up after x lines - DONE
+    #Seperate lines cleared and score - DONE
     #Pause button
     #High scores
     #Instruction menu
-    #Speed up after x score (or blocks placed to award multiple line clears)
+    #Add text to game window e.g. label hold, next, etc.
 
 # Package imports
 import pygame
@@ -97,7 +98,7 @@ class Tetris:
 
     def swap_held_piece(self):
         if self.held_figure == None:
-            self.held_figure = Figure(-5, 1, self.figure.type)
+            self.held_figure = Figure(-6, 1, self.figure.type)
             self.new_figure()
         else:
             #Current type
@@ -186,10 +187,12 @@ pygame.display.set_caption("Tetris - Yardley & Zeroni") # Can remove name if you
 
 # Loop until the user clicks the close button.
 done = False
+paused = False
 clock = pygame.time.Clock()
-fps = 25
+fps = 60
 game = Tetris(20, 10)
 counter = 0     #Used for dropping speed
+levels_passed = [0]
 
 current = [0,1,2,3,4,5,6]
 count = 0
@@ -198,15 +201,21 @@ joined_list = random.sample(current, 7)+random.sample(current, 7)
 pressing_down = False
 
 while not done:
-
     if game.figure is None:
         game.new_figure()
-    counter += 1
-    if counter > 100000:
-        counter = 0
 
-    if counter % (fps // game.level // 2) == 0 or pressing_down:
+    gravity = (0.8 - ((game.level - 1)*0.007)) ** (game.level - 1) #Official tetris formula - time per row in seconds
+    counter += 1
+
+    if (game.lines_cleared % 10 == 0) and (game.level <= 15):
+        if game.lines_cleared not in levels_passed:
+            game.level += 1
+            print("Level:", game.level)
+            levels_passed.append(game.lines_cleared)
+
+    if (counter >= (60 * gravity)) or (pressing_down and counter % 3 == 0):
         if game.state == "start":
+            counter = 0
             game.go_down()
 
     for event in pygame.event.get():
@@ -228,6 +237,8 @@ while not done:
             if event.key == pygame.K_ESCAPE:
                 game.__init__(20, 10)
                 counter = 0
+                game.held_figure = None
+                game.level = 1
 
     if event.type == pygame.KEYUP:
             if event.key == pygame.K_DOWN:
@@ -279,17 +290,18 @@ while not done:
 
     font = pygame.font.SysFont('Calibri', 25, True, False)
     font1 = pygame.font.SysFont('Calibri', 65, True, False)
-    text = font.render("SCORE: " + str(game.score), True, WHITE)
+    score = font.render("SCORE: " + str(game.score), True, WHITE)
+    lines = font.render("LINES CLEARED: " + str(game.lines_cleared), True, WHITE)
     text_game_over = font1.render("GAME OVER", True, WHITE)
     text_game_over1 = font1.render("  Press ESC", True, (0, 255, 255))
 
-    screen.blit(text, [0, 0])
+    screen.blit(score, [0, 0])
+    screen.blit(lines, [310, 0])
     if game.state == "gameover":
         screen.blit(text_game_over, [20, 200])
         screen.blit(text_game_over1, [25, 265])
 
     pygame.display.flip()
     clock.tick(fps)
-
 
 pygame.quit()
