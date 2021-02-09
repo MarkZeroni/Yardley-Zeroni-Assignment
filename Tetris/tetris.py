@@ -3,61 +3,66 @@
 
 ### Instructions ###
 # Left and right arrows move figures accordingly. Up arrow rotates the figure.
-# Down arrow speeds up the figures decent. Escape starts game again. Click "X" to Quit.
+# Down arrow speeds up the figures descent. Escape starts game again. Click "X" to Quit.
+
+#CHANGES TO BE MADE
+    #Make pieces come in proper order - DONE
+    #Give pieces proper colors - DONE
+    #Seperate lines cleared and score
+    #Clearing multiple lines at once gives more score than doing it seperately
+    #Pause button
+    #High scores
+    #Instruction menu
+    #Speed up after x score (or blocks placed to award multiple line clears)
+    #Next pieces - Partially done (need to implement graphics)
+    #Hold pieces
+
 
 # Package imports
 import pygame
 import random
 
-# Defines colours of shapes
+# Defines colors of shapes
 colours = [
-     (0, 0, 0), #Black
-     (120, 0, 179), #Purple
-     (100, 179, 179), #Teal
-     (255,255,0), #Yellow
-     (0,255,0), #Green
-     (255, 0, 0), #Red
-     (255, 0, 172),#Pink
+    (0,0,0),        #Black - needed to fix bug with teal pieces disappearing
+    (65, 241, 241), #Teal
+    (0, 47, 246),   #Blue
+    (238, 158, 0),  #Orange
+    (243,237,0),    #Yellow
+    (78,238,0),     #Green
+    (152, 44, 246), #Purple
+    (234, 0, 0),    #Red
 ]
 
 #Class for shape generation
 class Figure:
-    x = 0
-    y = 0
-
     figures = [
-        [[1, 5, 9, 13], [4, 5, 6, 7]], #Long straight shape
-        [[4, 5, 9, 10], [2, 6, 5, 9]], #offset block to the left
-        [[6, 7, 9, 10], [1, 5, 6, 10]], #offset block to the right
-        [[1, 2, 5, 9], [0, 4, 5, 6], [1, 5, 9, 8], [4, 5, 6, 10]], # L shape top to the right
-        [[1, 2, 6, 10], [5, 6, 7, 9], [2, 6, 10, 11], [3, 5, 6, 7]], # L shape top to the left
-        [[1, 4, 5, 6], [1, 4, 5, 9], [4, 5, 6, 9], [1, 5, 6, 9]], # T shape
-        [[1, 2, 5, 6]], # Cube
+        [[4,5,6,7],[2,6,10,14],[8,9,10,11],[1,5,9,13]], #I tetromino (4 long shape)
+        [[0,4,5,6],[2,1,5,9],[4,5,6,10],[1,5,9,8]],     #J tetromino
+        [[4,5,6,2],[1,5,9,10],[8,4,5,6],[0,1,5,9]],     #L tetromino
+        [[1,2,5,6]],                                    #O tetromino (cube)
+        [[1,2,4,5],[1,5,6,10],[8,9,5,6],[0,4,5,9]],     #S tetromino
+        [[1,4,5,6],[1,5,6,9],[4,5,6,9],[1,4,5,9]],      #T tetromino
+        [[0,1,5,6],[2,6,5,9],[4,5,9,10],[1,5,4,8]]      #Z tetromino
     ]
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, piece):
         self.x = x
         self.y = y
-        self.type = random.randint(0, len(self.figures) - 1)# Returns random figure
-        self.color = random.randint(1, len(colours) - 1) # Returns random colour
+        self.type = piece
+        self.color = piece + 1
         self.rotation = 0
 
     def image(self):
+        '''Returns the current shape position (rotation) in a 4x4 grid as a list of numbers'''
         return self.figures[self.type][self.rotation] #Rotation of figure upon generation
 
     def rotate(self):
-        self.rotation = (self.rotation + 1) % len(self.figures[self.type])
-
-
-
+        '''Iterates through the list of rotations for a particular shape'''
+        self.rotation = (self.rotation + 1) % len(self.figures[self.type])  #floor division used to loop around
 
 class Tetris:
-    level = 2
-    score = 0
-    state = "start"
-    field = []
-    height = 0
-    width = 0
+    level = 1
     x = 100
     y = 60
     zoom = 20
@@ -68,6 +73,7 @@ class Tetris:
         self.width = width
         self.field = []
         self.score = 0
+        self.lines_cleared = 0
         self.state = "start"
         for i in range(height):
             new_line = []
@@ -76,33 +82,45 @@ class Tetris:
             self.field.append(new_line)
 
     def new_figure(self):
-        self.figure = Figure(3, 0)
+        global current, count, joined_list
+        if count > 6:
+            joined_list = joined_list[7:] + random.sample(current, 7)
+            count = 0
+        piece = joined_list[count]
+        count += 1
+        self.figure = Figure(3, 0, piece)
+
+    def next_piece(self):
+        global joined_list, count
+        pieces = ["I","J","L","O","S","T","Z"]
+        return pieces[joined_list[count]]
 
     def intersects(self):
         intersection = False
-        for i in range(4):
-            for j in range(4):
-                if i * 4 + j in self.figure.image():
-                    if i + self.figure.y > self.height - 1 or \
-                            j + self.figure.x > self.width - 1 or \
-                            j + self.figure.x < 0 or \
-                            self.field[i + self.figure.y][j + self.figure.x] > 0:
+        for i in range(4):      #i represents row
+            for j in range(4):  #j represents column
+                if i * 4 + j in self.figure.image():                #numerical position in grid
+                    if (i + self.figure.y >= self.height or                         #All test if occupied grid position is out of bounds
+                            j + self.figure.x >= self.width or
+                            j + self.figure.x < 0 or
+                            self.field[i + self.figure.y][j + self.figure.x] > 0):
                         intersection = True
         return intersection
 
     def break_lines(self):
         lines = 0
-        for i in range(1, self.height):
+        for i in range(1, self.height):     #Checks each row
             zeros = 0
-            for j in range(self.width):
-                if self.field[i][j] == 0:
-                    zeros += 1
-            if zeros == 0:
+            for j in range(self.width):     #Checks each space in row
+                if self.field[i][j] == 0:   #If space is empty:
+                    zeros = 1
+            if zeros == 0:                  #If there are no empty spaces
                 lines += 1
-                for i1 in range(i, 1, -1):
+                for k in range(i, 1, -1):
                     for j in range(self.width):
-                        self.field[i1][j] = self.field[i1 - 1][j]
-        self.score += lines ** 2
+                        self.field[k][j] = self.field[k - 1][j]
+        self.score += lines ** 2    #Clearing multiple lines at once gives a better score
+        self.lines_cleared += lines
 
     def go_space(self):
         while not self.intersects():
@@ -123,16 +141,19 @@ class Tetris:
                     self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
         self.break_lines()
         self.new_figure()
+        print("Next Piece:", self.next_piece())
         if self.intersects():
             self.state = "gameover"
 
     def go_side(self, dx):
+        '''Moves shape dx squares to the right, stopping if it intersects with the boundries or another piece'''
         old_x = self.figure.x
         self.figure.x += dx
         if self.intersects():
             self.figure.x = old_x
 
     def rotate(self):
+        '''Rotates shape clockwise, stopping if it intersects with the boundries or another piece'''
         old_rotation = self.figure.rotation
         self.figure.rotate()
         if self.intersects():
@@ -142,7 +163,7 @@ class Tetris:
 # Initialize the game engine
 pygame.init()
 
-# Define colours that are not shapes
+# Define colors that are not shapes
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GRAY = (128, 128, 128)
@@ -158,11 +179,16 @@ done = False
 clock = pygame.time.Clock()
 fps = 25
 game = Tetris(20, 10)
-counter = 0
+counter = 0     #Used for dropping speed
+
+current = [0,1,2,3,4,5,6]
+count = 0
+joined_list = random.sample(current, 7)+random.sample(current, 7)
 
 pressing_down = False
 
 while not done:
+
     if game.figure is None:
         game.new_figure()
     counter += 1
@@ -189,6 +215,7 @@ while not done:
                 game.go_space()
             if event.key == pygame.K_ESCAPE:
                 game.__init__(20, 10)
+                counter = 0
 
     if event.type == pygame.KEYUP:
             if event.key == pygame.K_DOWN:
@@ -196,17 +223,17 @@ while not done:
 
     screen.fill(BLACK) # Sets background to black to assist with ease of playing for long term.
 
-    for i in range(game.height):
+    for i in range(game.height):    #Draws grid pattern
         for j in range(game.width):
             pygame.draw.rect(screen, GRAY, [game.x + game.zoom * j, game.y + game.zoom * i, game.zoom, game.zoom], 1)
-            if game.field[i][j] > 0:
-                pygame.draw.rect(screen, colours[game.field[i][j]],
+            if game.field[i][j] > 0:    #If there is something in the current square:
+                pygame.draw.rect(screen, colours[game.field[i][j]], #Draw a rect with the associated color
                                  [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
 
-    if game.figure is not None:
+    if game.figure is not None: #Draw figure if it exists
         for i in range(4):
             for j in range(4):
-                p = i * 4 + j
+                p = i * 4 + j   #Go through each square in the figure's 4x4 grid
                 if p in game.figure.image():
                     pygame.draw.rect(screen, colours[game.figure.color],
                                      [game.x + game.zoom * (j + game.figure.x) + 1,
