@@ -1,23 +1,8 @@
 # HIT137 - Assignment 2 Keith Yardley & Mark Zeroni
 #                       ******   Tetris   ******
 
-### Instructions ###
-# Left and right arrows move figures accordingly. Up arrow rotates the figure. Press "C" to hold the piece or swap it with the currently held piece.
-# Down arrow speeds up the figures descent. Space instantly places the piece. Escape starts game again. Click the "X" to Quit.
-
 #CHANGES TO BE MADE
-    #Make pieces come in proper order - DONE
-    #Give pieces proper colors - DONE
-    #Next pieces - DONE
-    #Hold pieces - DONE
-    #Speed up after x lines - DONE
-    #Seperate lines cleared and score - DONE
-    #Instruction menu - DONE
-    #Add text to game window e.g. label hold, next, etc. - DONE
-    #Pause feature - DONE
-    #High scores
-    #Add outline to game over text for better readability
-    #Add prediction piece
+    #High scores - Check if needed
     #Optimise
     #Remove debug code
 
@@ -25,7 +10,7 @@
 import pygame
 import random
 
-# Defines colors of shapes
+# Defines colors of shapes - all rgb values are approximately accurate to the actual game.
 colours = [
     (0,0,0),        #Black - needed to fix bug with teal pieces disappearing
     (65, 241, 241), #Teal - if this was first it would be index 0 and thus disappear once placed
@@ -72,6 +57,7 @@ class Tetris:
     figure = None
     next_figure = None
     held_figure = None
+    prediction_figure = None
 
     def __init__(self, height, width):
         self.height = height
@@ -94,6 +80,7 @@ class Tetris:
         piece = joined_list[count]
         count += 1
         self.figure = Figure(3, 0, piece)
+        self.prediction_figure = None
 
     def next_piece(self):
         global joined_list, count
@@ -115,7 +102,7 @@ class Tetris:
         for i in range(4):      #i represents row
             for j in range(4):  #j represents column
                 if i * 4 + j in self.figure.image():                #numerical position in grid
-                    if (i + self.figure.y >= self.height or                         #All test if occupied grid position is out of bounds
+                    if (i + self.figure.y >= self.height or         #All test if occupied grid position is out of bounds
                             j + self.figure.x >= self.width or
                             j + self.figure.x < 0 or
                             self.field[i + self.figure.y][j + self.figure.x] > 0):
@@ -142,6 +129,25 @@ class Tetris:
             self.figure.y += 1
         self.figure.y -= 1
         self.freeze()
+
+    def prediction_piece(self):
+        self.prediction_figure = Figure(self.figure.x, self.figure.y, self.figure.type)
+        self.prediction_figure.rotation = self.figure.rotation
+        while not self.intersects_prediction():
+            self.prediction_figure.y += 1
+        self.prediction_figure.y -= 1
+
+    def intersects_prediction(self):
+        intersection = False
+        for i in range(4):      #i represents row
+            for j in range(4):  #j represents column
+                if i * 4 + j in self.prediction_figure.image():                #numerical position in grid
+                    if (i + self.prediction_figure.y >= self.height or         #All test if occupied grid position is out of bounds
+                            j + self.prediction_figure.x >= self.width or
+                            j + self.prediction_figure.x < 0 or
+                            self.field[i + self.prediction_figure.y][j + self.prediction_figure.x] > 0):
+                        intersection = True
+        return intersection
 
     def go_down(self):
         self.figure.y += 1
@@ -227,9 +233,11 @@ font_small = pygame.font.SysFont('Calibri', 16, True, False)
 font_med = pygame.font.SysFont('Calibri', 25, True, False)
 font_large = pygame.font.SysFont('Calibri', 65, True, False)
 
+paused_text_outline = font_large.render("PAUSED", True, BLACK)
+
 paused_text = font_large.render("PAUSED", True, WHITE)
 paused_text_rect = paused_text.get_rect(center=(size_x/2, size_y/2))
-
+top_left = paused_text_rect.topleft
 
 while not done:
     for event in pygame.event.get():
@@ -244,13 +252,14 @@ while not done:
         if game.figure is None:
             game.new_figure()
 
+        game.prediction_piece()
+
         gravity = (0.8 - ((game.level - 1)*0.007)) ** (game.level - 1) #Official tetris formula - time per row in seconds
         counter += 1
 
         if (game.lines_cleared % 10 == 0) and (game.level <= 15):
             if game.lines_cleared not in levels_passed:
                 game.level += 1
-                print("Level:", game.level)
                 levels_passed.append(game.lines_cleared)
 
         if (counter >= (60 * gravity)) or (pressing_down and counter % 3 == 0):
@@ -279,6 +288,7 @@ while not done:
                     game.swap_held_piece()
                 if event.key == pygame.K_ESCAPE:
                     game.__init__(20, 10)
+                    game.figure = None
                     counter = 0
                     game.held_figure = None
                     game.level = 1
@@ -331,16 +341,31 @@ while not done:
                                         game.y + game.zoom * (i + game.held_figure.y) + 1,
                                         game.zoom - 2, game.zoom - 2])
 
+        if game.prediction_figure is not None: #Draw prediction figure if it exists
+            for i in range(4):
+                for j in range(4):
+                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
+                    if p in game.prediction_figure.image():
+                        pygame.draw.rect(screen, colours[game.prediction_figure.color],
+                                        [game.x + game.zoom * (j + game.prediction_figure.x) + 1,
+                                        game.y + game.zoom * (i + game.prediction_figure.y) + 1,
+                                        game.zoom - 2, game.zoom - 2], 2)
+
     #---------------TEXT---------------
         draw_instructions(instructions_list)
         
         score = font_med.render("SCORE: " + str(game.score), True, WHITE)
         screen.blit(score, [10, 10])
         
-        lines = font_med.render("LINES CLEARED: " + str(game.lines_cleared), True, WHITE)
+        lines = font_med.render("LINES: " + str(game.lines_cleared), True, WHITE)
         lines_rect = lines.get_rect()
         lines_rect.topright = (510,10)
         screen.blit(lines, lines_rect)
+
+        levels = font_med.render("LEVEL: " + str(game.level), True, WHITE)
+        levels_rect = levels.get_rect()
+        levels_rect.midtop = (size_x/2, 10)
+        screen.blit(levels, levels_rect)
 
         hold = font_med.render("HOLD", True, WHITE)
         hold_rect = hold.get_rect()
@@ -353,18 +378,27 @@ while not done:
         screen.blit(next, next_rect)
 
         text_game_over = font_large.render("GAME OVER", True, WHITE)
+        text_game_over_outline = font_large.render("GAME OVER", True, BLACK)
         text_game_over_rect = text_game_over.get_rect()
         text_game_over_rect.midbottom = (size_x/2,(size_y/2)-10)
         
-        text_game_over1 = font_large.render("Press ESC", True, (0, 255, 255))
+        text_game_over1 = font_large.render("Press ESC", True, WHITE)
+        text_game_over1_outline = font_large.render("Press ESC", True, BLACK)
         text_game_over1_rect = text_game_over1.get_rect()
         text_game_over1_rect.midtop = (size_x/2,(size_y/2)+10)
         
         if game.state == "gameover":
-            screen.blit(text_game_over, text_game_over_rect)
+            for i in [(93-2,225-2),(93+2,225-2),(93+2,225+2),(93-2,225+2)]: #Outline works by rendering 4 black versions of the text slightly offset from the centre.
+                screen.blit(text_game_over_outline, i)
+            screen.blit(text_game_over, text_game_over_rect)                #Then the actual text is rendered on top of the outline.
+
+            for i in [(133-2,310-2),(133+2,310-2),(133+2,310+2),(133-2,310+2)]:
+                screen.blit(text_game_over1_outline, i)
             screen.blit(text_game_over1, text_game_over1_rect)
 
         if paused == True:
+            for i in [(151-2,268-2),(151+2,268-2),(151+2,268+2),(151-2,268+2)]:
+                screen.blit(paused_text_outline, i)
             screen.blit(paused_text, paused_text_rect)
 
         pygame.display.flip()
