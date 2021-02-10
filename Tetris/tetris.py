@@ -3,7 +3,7 @@
 
 ### Instructions ###
 # Left and right arrows move figures accordingly. Up arrow rotates the figure. Press "C" to hold the piece or swap it with the currently held piece.
-# Down arrow speeds up the figures descent. Escape starts game again. Click the "X" to Quit.
+# Down arrow speeds up the figures descent. Space instantly places the piece. Escape starts game again. Click the "X" to Quit.
 
 #CHANGES TO BE MADE
     #Make pieces come in proper order - DONE
@@ -12,10 +12,14 @@
     #Hold pieces - DONE
     #Speed up after x lines - DONE
     #Seperate lines cleared and score - DONE
-    #Pause button
+    #Instruction menu - DONE
+    #Add text to game window e.g. label hold, next, etc. - DONE
+    #Pause feature - DONE
     #High scores
-    #Instruction menu
-    #Add text to game window e.g. label hold, next, etc.
+    #Add outline to game over text for better readability
+    #Add prediction piece
+    #Optimise
+    #Remove debug code
 
 # Package imports
 import pygame
@@ -170,7 +174,6 @@ class Tetris:
         if self.intersects():
             self.figure.rotation = old_rotation
 
-
 # Initialize the game engine
 pygame.init()
 
@@ -180,7 +183,9 @@ WHITE = (255, 255, 255)
 GRAY = (128, 128, 128)
 
 # Defines size of the screen
-size = (520, 500)
+size_x = 520
+size_y = 600
+size = (size_x, size_y)
 screen = pygame.display.set_mode(size)
 
 pygame.display.set_caption("Tetris - Yardley & Zeroni") # Can remove name if you want I think it's a nice touch
@@ -200,108 +205,169 @@ joined_list = random.sample(current, 7)+random.sample(current, 7)
 
 pressing_down = False
 
+instructions_list = [
+    "Left and right arrows move the piece left and right.",
+    "Up arrow rotates the piece.",
+    "Down arrow moves the piece down faster.",
+    "Space instantly places the piece.",
+    "C holds the piece and/or swaps with the currently held piece.",
+    "P pauses/unpauses the game."
+    ]
+
+def draw_instructions(instructions_list):
+    start_y = 480
+    j = 0
+    for i in instructions_list:
+        text = font_small.render(i, True, WHITE)
+        rect = text.get_rect(midtop=(size_x/2,start_y + (j * font_small.get_linesize())))
+        screen.blit(text, rect)
+        j += 1
+
+font_small = pygame.font.SysFont('Calibri', 16, True, False)
+font_med = pygame.font.SysFont('Calibri', 25, True, False)
+font_large = pygame.font.SysFont('Calibri', 65, True, False)
+
+paused_text = font_large.render("PAUSED", True, WHITE)
+paused_text_rect = paused_text.get_rect(center=(size_x/2, size_y/2))
+
+
 while not done:
-    if game.figure is None:
-        game.new_figure()
-
-    gravity = (0.8 - ((game.level - 1)*0.007)) ** (game.level - 1) #Official tetris formula - time per row in seconds
-    counter += 1
-
-    if (game.lines_cleared % 10 == 0) and (game.level <= 15):
-        if game.lines_cleared not in levels_passed:
-            game.level += 1
-            print("Level:", game.level)
-            levels_passed.append(game.lines_cleared)
-
-    if (counter >= (60 * gravity)) or (pressing_down and counter % 3 == 0):
-        if game.state == "start":
-            counter = 0
-            game.go_down()
-
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                game.rotate()
-            if event.key == pygame.K_DOWN:
-                pressing_down = True
-            if event.key == pygame.K_LEFT:
-                game.go_side(-1)
-            if event.key == pygame.K_RIGHT:
-                game.go_side(1)
-            if event.key == pygame.K_SPACE:
-                game.go_space()
-            if event.key == pygame.K_c:
-                game.swap_held_piece()
-            if event.key == pygame.K_ESCAPE:
-                game.__init__(20, 10)
+            if event.key == pygame.K_p:
+                paused = not paused
+        if event.type == pygame.QUIT:
+                done = True
+                paused = True
+                
+    while not paused:
+        if game.figure is None:
+            game.new_figure()
+
+        gravity = (0.8 - ((game.level - 1)*0.007)) ** (game.level - 1) #Official tetris formula - time per row in seconds
+        counter += 1
+
+        if (game.lines_cleared % 10 == 0) and (game.level <= 15):
+            if game.lines_cleared not in levels_passed:
+                game.level += 1
+                print("Level:", game.level)
+                levels_passed.append(game.lines_cleared)
+
+        if (counter >= (60 * gravity)) or (pressing_down and counter % 3 == 0):
+            if game.state == "start":
                 counter = 0
-                game.held_figure = None
-                game.level = 1
+                game.go_down()
 
-    if event.type == pygame.KEYUP:
-            if event.key == pygame.K_DOWN:
-                pressing_down = False
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
+                paused = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    paused = not paused
+                if event.key == pygame.K_UP:
+                    game.rotate()
+                if event.key == pygame.K_DOWN:
+                    pressing_down = True
+                if event.key == pygame.K_LEFT:
+                    game.go_side(-1)
+                if event.key == pygame.K_RIGHT:
+                    game.go_side(1)
+                if event.key == pygame.K_SPACE:
+                    game.go_space()
+                if event.key == pygame.K_c:
+                    game.swap_held_piece()
+                if event.key == pygame.K_ESCAPE:
+                    game.__init__(20, 10)
+                    counter = 0
+                    game.held_figure = None
+                    game.level = 1
 
-    screen.fill(BLACK) # Sets background to black to assist with ease of playing for long term.
+        if event.type == pygame.KEYUP:
+                if event.key == pygame.K_DOWN:
+                    pressing_down = False
 
-    for i in range(game.height):    #Draws grid pattern
-        for j in range(game.width):
-            pygame.draw.rect(screen, GRAY, [game.x + game.zoom * j, game.y + game.zoom * i, game.zoom, game.zoom], 1)
-            if game.field[i][j] > 0:    #If there is something in the current square:
-                pygame.draw.rect(screen, colours[game.field[i][j]], #Draw a rect with the associated color
-                                 [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
+        screen.fill(BLACK) # Sets background to black to assist with ease of playing for long term.
 
-    #Held Window
-    pygame.draw.rect(screen, GRAY, [game.x - game.zoom * 6, game.y, game.zoom*4, game.zoom*4], 1)
-    #Next Window
-    pygame.draw.rect(screen, GRAY, [game.x + game.zoom * 12, game.y, game.zoom*4, game.zoom*4], 1)
+        for i in range(game.height):    #Draws grid pattern
+            for j in range(game.width):
+                pygame.draw.rect(screen, GRAY, [game.x + game.zoom * j, game.y + game.zoom * i, game.zoom, game.zoom], 1)
+                if game.field[i][j] > 0:    #If there is something in the current square:
+                    pygame.draw.rect(screen, colours[game.field[i][j]], #Draw a rect with the associated color
+                                    [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
 
-    if game.figure is not None: #Draw figure if it exists
-        for i in range(4):
-            for j in range(4):
-                p = i * 4 + j   #Go through each square in the figure's 4x4 grid
-                if p in game.figure.image():
-                    pygame.draw.rect(screen, colours[game.figure.color],
-                                     [game.x + game.zoom * (j + game.figure.x) + 1,
-                                      game.y + game.zoom * (i + game.figure.y) + 1,
-                                      game.zoom - 2, game.zoom - 2])
+        #Held Window
+        pygame.draw.rect(screen, GRAY, [game.x - game.zoom * 6, game.y, game.zoom*4, game.zoom*4], 1)
+        #Next Window
+        pygame.draw.rect(screen, GRAY, [game.x + game.zoom * 12, game.y, game.zoom*4, game.zoom*4], 1)
 
-    if game.next_figure is not None: #Draw next figure if it exists
-        for i in range(4):
-            for j in range(4):
-                p = i * 4 + j   #Go through each square in the figure's 4x4 grid
-                if p in game.next_figure.image():
-                    pygame.draw.rect(screen, colours[game.next_figure.color],
-                                     [game.x + game.zoom * (j + game.next_figure.x) + 1,
-                                      game.y + game.zoom * (i + game.next_figure.y) + 1,
-                                      game.zoom - 2, game.zoom - 2])
+        if game.figure is not None: #Draw figure if it exists
+            for i in range(4):
+                for j in range(4):
+                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
+                    if p in game.figure.image():
+                        pygame.draw.rect(screen, colours[game.figure.color],
+                                        [game.x + game.zoom * (j + game.figure.x) + 1,
+                                        game.y + game.zoom * (i + game.figure.y) + 1,
+                                        game.zoom - 2, game.zoom - 2])
 
-    if game.held_figure is not None: #Draw held figure if it exists
-        for i in range(4):
-            for j in range(4):
-                p = i * 4 + j   #Go through each square in the figure's 4x4 grid
-                if p in game.held_figure.image():
-                    pygame.draw.rect(screen, colours[game.held_figure.color],
-                                     [game.x + game.zoom * (j + game.held_figure.x) + 1,
-                                      game.y + game.zoom * (i + game.held_figure.y) + 1,
-                                      game.zoom - 2, game.zoom - 2])
+        if game.next_figure is not None: #Draw next figure if it exists
+            for i in range(4):
+                for j in range(4):
+                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
+                    if p in game.next_figure.image():
+                        pygame.draw.rect(screen, colours[game.next_figure.color],
+                                        [game.x + game.zoom * (j + game.next_figure.x) + 1,
+                                        game.y + game.zoom * (i + game.next_figure.y) + 1,
+                                        game.zoom - 2, game.zoom - 2])
 
-    font = pygame.font.SysFont('Calibri', 25, True, False)
-    font1 = pygame.font.SysFont('Calibri', 65, True, False)
-    score = font.render("SCORE: " + str(game.score), True, WHITE)
-    lines = font.render("LINES CLEARED: " + str(game.lines_cleared), True, WHITE)
-    text_game_over = font1.render("GAME OVER", True, WHITE)
-    text_game_over1 = font1.render("  Press ESC", True, (0, 255, 255))
+        if game.held_figure is not None: #Draw held figure if it exists
+            for i in range(4):
+                for j in range(4):
+                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
+                    if p in game.held_figure.image():
+                        pygame.draw.rect(screen, colours[game.held_figure.color],
+                                        [game.x + game.zoom * (j + game.held_figure.x) + 1,
+                                        game.y + game.zoom * (i + game.held_figure.y) + 1,
+                                        game.zoom - 2, game.zoom - 2])
 
-    screen.blit(score, [0, 0])
-    screen.blit(lines, [310, 0])
-    if game.state == "gameover":
-        screen.blit(text_game_over, [20, 200])
-        screen.blit(text_game_over1, [25, 265])
+    #---------------TEXT---------------
+        draw_instructions(instructions_list)
+        
+        score = font_med.render("SCORE: " + str(game.score), True, WHITE)
+        screen.blit(score, [10, 10])
+        
+        lines = font_med.render("LINES CLEARED: " + str(game.lines_cleared), True, WHITE)
+        lines_rect = lines.get_rect()
+        lines_rect.topright = (510,10)
+        screen.blit(lines, lines_rect)
 
-    pygame.display.flip()
-    clock.tick(fps)
+        hold = font_med.render("HOLD", True, WHITE)
+        hold_rect = hold.get_rect()
+        hold_rect.midtop = (80, 150)
+        screen.blit(hold, hold_rect)
+
+        next = font_med.render("NEXT", True, WHITE)
+        next_rect = next.get_rect()
+        next_rect.midtop = (440, 150)
+        screen.blit(next, next_rect)
+
+        text_game_over = font_large.render("GAME OVER", True, WHITE)
+        text_game_over_rect = text_game_over.get_rect()
+        text_game_over_rect.midbottom = (size_x/2,(size_y/2)-10)
+        
+        text_game_over1 = font_large.render("Press ESC", True, (0, 255, 255))
+        text_game_over1_rect = text_game_over1.get_rect()
+        text_game_over1_rect.midtop = (size_x/2,(size_y/2)+10)
+        
+        if game.state == "gameover":
+            screen.blit(text_game_over, text_game_over_rect)
+            screen.blit(text_game_over1, text_game_over1_rect)
+
+        if paused == True:
+            screen.blit(paused_text, paused_text_rect)
+
+        pygame.display.flip()
+        clock.tick(fps)
 
 pygame.quit()
