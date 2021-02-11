@@ -5,7 +5,6 @@
 #Max lines of code: 407
 
 #CHANGES TO BE MADE
-    #High scores - Check if needed
     #Optimise
     #Remove debug code
 
@@ -85,6 +84,13 @@ class Tetris:
         self.figure = Figure(3, 0, piece)
         self.prediction_figure = None
 
+    def prediction_piece(self):
+        self.prediction_figure = Figure(self.figure.x, self.figure.y, self.figure.type)
+        self.prediction_figure.rotation = self.figure.rotation
+        while not self.intersects(self.prediction_figure):
+            self.prediction_figure.y += 1
+        self.prediction_figure.y -= 1
+
     def next_piece(self):
         global joined_list, count
         piece = joined_list[count]
@@ -100,15 +106,15 @@ class Tetris:
             self.held_figure = Figure(-6, 1, self.figure.type)
             self.figure = Figure(3, 0, held_type)
 
-    def intersects(self):
+    def intersects(self, figure):
         intersection = False
         for i in range(4):      #i represents row
             for j in range(4):  #j represents column
-                if i * 4 + j in self.figure.image():                #numerical position in grid
-                    if (i + self.figure.y >= self.height or         #All test if occupied grid position is out of bounds
-                            j + self.figure.x >= self.width or
-                            j + self.figure.x < 0 or
-                            self.field[i + self.figure.y][j + self.figure.x] > 0):
+                if i * 4 + j in figure.image():                #numerical position in grid
+                    if (i + figure.y >= self.height or         #All test if occupied grid position is out of bounds
+                            j + figure.x >= self.width or
+                            j + figure.x < 0 or
+                            self.field[i + figure.y][j + figure.x] > 0):
                         intersection = True
         return intersection
 
@@ -128,33 +134,14 @@ class Tetris:
         self.lines_cleared += lines
 
     def go_space(self):
-        while not self.intersects():
+        while not self.intersects(self.figure):
             self.figure.y += 1
         self.figure.y -= 1
         self.freeze()
 
-    def prediction_piece(self):
-        self.prediction_figure = Figure(self.figure.x, self.figure.y, self.figure.type)
-        self.prediction_figure.rotation = self.figure.rotation
-        while not self.intersects_prediction():
-            self.prediction_figure.y += 1
-        self.prediction_figure.y -= 1
-
-    def intersects_prediction(self):
-        intersection = False
-        for i in range(4):      #i represents row
-            for j in range(4):  #j represents column
-                if i * 4 + j in self.prediction_figure.image():                #numerical position in grid
-                    if (i + self.prediction_figure.y >= self.height or         #All test if occupied grid position is out of bounds
-                            j + self.prediction_figure.x >= self.width or
-                            j + self.prediction_figure.x < 0 or
-                            self.field[i + self.prediction_figure.y][j + self.prediction_figure.x] > 0):
-                        intersection = True
-        return intersection
-
     def go_down(self):
         self.figure.y += 1
-        if self.intersects():
+        if self.intersects(self.figure):
             self.figure.y -= 1
             self.freeze()
 
@@ -166,62 +153,34 @@ class Tetris:
         self.break_lines()
         self.new_figure()
         self.next_piece()
-        if self.intersects():
+        if self.intersects(self.figure):
             self.state = "gameover"
 
     def go_side(self, dx):
         '''Moves shape dx squares to the right, stopping if it intersects with the boundries or another piece'''
         old_x = self.figure.x
         self.figure.x += dx
-        if self.intersects():
+        if self.intersects(self.figure):
             self.figure.x = old_x
 
     def rotate(self):
         '''Rotates shape clockwise, stopping if it intersects with the boundries or another piece'''
         old_rotation = self.figure.rotation
         self.figure.rotate()
-        if self.intersects():
+        if self.intersects(self.figure):
             self.figure.rotation = old_rotation
 
-# Initialize the game engine
-pygame.init()
-
-# Define colors that are not shapes
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GRAY = (128, 128, 128)
-
-# Defines size of the screen
-size_x = 520
-size_y = 600
-size = (size_x, size_y)
-screen = pygame.display.set_mode(size)
-
-pygame.display.set_caption("Tetris - Yardley & Zeroni") # Can remove name if you want I think it's a nice touch
-
-# Loop until the user clicks the close button.
-done = False
-paused = False
-clock = pygame.time.Clock()
-fps = 60
-game = Tetris(20, 10)
-counter = 0     #Used for dropping speed
-levels_passed = [0]
-
-current = [0,1,2,3,4,5,6]
-count = 0
-joined_list = random.sample(current, 7)+random.sample(current, 7)
-
-pressing_down = False
-
-instructions_list = [
-    "Left and right arrows move the piece left and right.",
-    "Up arrow rotates the piece.",
-    "Down arrow moves the piece down faster.",
-    "Space instantly places the piece.",
-    "C holds the piece and/or swaps with the currently held piece.",
-    "P pauses/unpauses the game."
-    ]
+#---------------DEFINITIONS---------------#
+def draw_figure(figure, width):
+    if figure is not None: #Draw figure if it exists
+        for i in range(4):
+            for j in range(4):
+                p = i * 4 + j   #Go through each square in the figure's 4x4 grid
+                if p in figure.image():
+                    pygame.draw.rect(screen, colours[figure.color],
+                                    [game.x + game.zoom * (j + figure.x) + 1,
+                                    game.y + game.zoom * (i + figure.y) + 1,
+                                    game.zoom - 2, game.zoom - 2], width)
 
 def draw_text(text, font, color, x, y, anchor, outline):
     text_temp = font.render(text, True, WHITE)
@@ -243,14 +202,46 @@ def draw_instructions(instructions_list):
         screen.blit(text, rect)
         j += 1
 
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GRAY = (128, 128, 128)
+
+size_x = 520
+size_y = 600
+size = (size_x, size_y)
+pygame.init()   # Initialize the game engine
+screen = pygame.display.set_mode(size) # Defines size of the screen
+pygame.display.set_caption("Tetris - Yardley & Zeroni") # Renames window
+clock = pygame.time.Clock()
+
+done = False # Loop until the user clicks the close button.
+paused = False
+pressing_down = False
+
+fps = 60
+counter = 0     #Used for piece dropping speed
+game = Tetris(20, 10)
+levels_passed = [0]
+
+current = [0,1,2,3,4,5,6]
+count = 0
+joined_list = random.sample(current, 7)+random.sample(current, 7)
+
+instructions_list = [
+    "Left and right arrows move the piece left and right.",
+    "Up arrow rotates the piece.",
+    "Down arrow moves the piece down faster.",
+    "Space instantly places the piece.",
+    "C holds the piece and/or swaps with the currently held piece.",
+    "P pauses/unpauses the game."
+    ]
+
 font_small = pygame.font.SysFont('Calibri', 16, True, False)
 font_med = pygame.font.SysFont('Calibri', 25, True, False)
 font_large = pygame.font.SysFont('Calibri', 65, True, False)
 
-draw_text("PAUSED", font_large, WHITE, size_x/2, size_y/2, "center", True)
-
 while not done:
-    for event in pygame.event.get():
+    for event in pygame.event.get():        #These allow the program to be unpaused and closed when paused.
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 paused = not paused
@@ -260,17 +251,17 @@ while not done:
                 
     while not paused:
         if game.figure is None:
-            game.new_figure()
+            game.new_figure()   #Generates initial piece
 
-        game.prediction_piece()
+        game.prediction_piece() #Generates the prediction piece
 
         gravity = (0.8 - ((game.level - 1)*0.007)) ** (game.level - 1) #Official tetris formula - time per row in seconds
-        counter += 1
+        counter += 1 #Counts frames elapsed
 
-        if (game.lines_cleared % 10 == 0) and (game.level <= 15):
+        if (game.lines_cleared % 10 == 0) and (game.level < 15):   #Every 10 lines cleared, the level increases until the level is 15.
             if game.lines_cleared not in levels_passed:
                 game.level += 1
-                levels_passed.append(game.lines_cleared)
+                levels_passed.append(game.lines_cleared)    #Needed to prevent the level continually increasing every loop.
 
         if (counter >= (60 * gravity)) or (pressing_down and counter % 3 == 0):
             if game.state == "start":
@@ -287,7 +278,7 @@ while not done:
                 if event.key == pygame.K_UP:
                     game.rotate()
                 if event.key == pygame.K_DOWN:
-                    pressing_down = True
+                    pressing_down = True    #Allows holding the button down
                 if event.key == pygame.K_LEFT:
                     game.go_side(-1)
                 if event.key == pygame.K_RIGHT:
@@ -296,16 +287,17 @@ while not done:
                     game.go_space()
                 if event.key == pygame.K_c:
                     game.swap_held_piece()
-                if event.key == pygame.K_ESCAPE:
+                if event.key == pygame.K_ESCAPE:    #Reset all
                     game.__init__(20, 10)
                     game.figure = None
                     counter = 0
                     game.held_figure = None
                     game.level = 1
+                    levels_passed = []
 
         if event.type == pygame.KEYUP:
                 if event.key == pygame.K_DOWN:
-                    pressing_down = False
+                    pressing_down = False   #Allows holding the button down
 
         screen.fill(BLACK) # Sets background to black to assist with ease of playing for long term.
 
@@ -316,52 +308,15 @@ while not done:
                     pygame.draw.rect(screen, colours[game.field[i][j]], #Draw a rect with the associated color
                                     [game.x + game.zoom * j + 1, game.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
 
-        #Held Window
-        pygame.draw.rect(screen, GRAY, [game.x - game.zoom * 6, game.y, game.zoom*4, game.zoom*4], 1)
-        #Next Window
-        pygame.draw.rect(screen, GRAY, [game.x + game.zoom * 12, game.y, game.zoom*4, game.zoom*4], 1)
+        pygame.draw.rect(screen, GRAY, [game.x - game.zoom * 6, game.y, game.zoom*4, game.zoom*4], 1) #Held Window
+        pygame.draw.rect(screen, GRAY, [game.x + game.zoom * 12, game.y, game.zoom*4, game.zoom*4], 1) #Next Window
+        
+        draw_figure(game.figure, 0) #Draws the figures onto the screen
+        draw_figure(game.next_figure, 0)
+        draw_figure(game.held_figure, 0)
+        draw_figure(game.prediction_figure, 2)
 
-        if game.figure is not None: #Draw figure if it exists
-            for i in range(4):
-                for j in range(4):
-                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
-                    if p in game.figure.image():
-                        pygame.draw.rect(screen, colours[game.figure.color],
-                                        [game.x + game.zoom * (j + game.figure.x) + 1,
-                                        game.y + game.zoom * (i + game.figure.y) + 1,
-                                        game.zoom - 2, game.zoom - 2])
-
-        if game.next_figure is not None: #Draw next figure if it exists
-            for i in range(4):
-                for j in range(4):
-                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
-                    if p in game.next_figure.image():
-                        pygame.draw.rect(screen, colours[game.next_figure.color],
-                                        [game.x + game.zoom * (j + game.next_figure.x) + 1,
-                                        game.y + game.zoom * (i + game.next_figure.y) + 1,
-                                        game.zoom - 2, game.zoom - 2])
-
-        if game.held_figure is not None: #Draw held figure if it exists
-            for i in range(4):
-                for j in range(4):
-                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
-                    if p in game.held_figure.image():
-                        pygame.draw.rect(screen, colours[game.held_figure.color],
-                                        [game.x + game.zoom * (j + game.held_figure.x) + 1,
-                                        game.y + game.zoom * (i + game.held_figure.y) + 1,
-                                        game.zoom - 2, game.zoom - 2])
-
-        if game.prediction_figure is not None: #Draw prediction figure if it exists
-            for i in range(4):
-                for j in range(4):
-                    p = i * 4 + j   #Go through each square in the figure's 4x4 grid
-                    if p in game.prediction_figure.image():
-                        pygame.draw.rect(screen, colours[game.prediction_figure.color],
-                                        [game.x + game.zoom * (j + game.prediction_figure.x) + 1,
-                                        game.y + game.zoom * (i + game.prediction_figure.y) + 1,
-                                        game.zoom - 2, game.zoom - 2], 2)
-
-    #---------------TEXT---------------
+    #---------------TEXT---------------#
         draw_text("SCORE: " + str(game.score), font_med, WHITE, 10, 10, "topleft", False)
         draw_text("LINES: " + str(game.lines_cleared), font_med, WHITE, 510, 10, "topright", False)
         draw_text("LEVEL: " + str(game.level), font_med, WHITE, size_x/2, 10, "midtop", False)
@@ -376,7 +331,7 @@ while not done:
         if paused == True:
             draw_text("PAUSED", font_large, WHITE, size_x/2, size_y/2, "center", True)
 
-        pygame.display.flip()
-        clock.tick(fps)
+        pygame.display.flip()   #Updates the screen
+        clock.tick(fps)         #Waits until (1/fps) seconds passes
 
 pygame.quit()
