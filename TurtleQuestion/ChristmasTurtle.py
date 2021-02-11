@@ -2,30 +2,39 @@
 #Remove debug code
 #Optimise - remove redundant code i.e. multiple instances of setting speed when it hasn't changed
 #   Possibly remove centred square function and add a generic draw (uncentred) shape function
+#Max lines: 288
 
 import random
 from turtle import *
-from math import radians, tan
+from math import radians, tan #Needed to calculate center of some ornaments
+
+def setupTurtle(t, pen_state="up", coordTuple=None, heading=0, speed=0, fillcolor="black", shape="turtle", turtlesize=1, width=1):
+    '''Sets up the turtle with a variety of attributes. Only Turtle (t) is mandatory.'''
+    t.speed(0)
+    t.up()
+    if coordTuple is not None: t.goto(coordTuple)
+    t.speed(speed)
+    if pen_state == "down": t.down()
+    t.seth(heading)
+    t.fillcolor(fillcolor)
+    t.shape(shape)
+    t.turtlesize(turtlesize)
+    t.width(width)
 
 def setupRoom(t):
     '''Sets up the room background and draws windows.'''
-    t.speed(10)
     #Floor
     hgt = t.screen.window_height()
     wdt = t.screen.window_width()
-    t.up()
-    t.goto((wdt * -0.5),(hgt * -0.3))
-    t.down()
+    setupTurtle(t, "down", ((wdt * -0.5),(hgt * -0.3)), fillcolor="brown", speed=0)
     t.begin_fill()
-    t.fillcolor("brown")
     t.goto((wdt * 0.5),(hgt * -0.3))
     t.goto((wdt * 0.5),(hgt * -0.5))
     t.goto((wdt * -0.5),(hgt * -0.5))
     t.end_fill()
     #Wall
-    t.goto((wdt * -0.5),(hgt * -0.3))
+    setupTurtle(t, "down", ((wdt * -0.5),(hgt * -0.3)), fillcolor=(50,50,70), speed=0)
     t.begin_fill()
-    t.fillcolor((50,50,70))
     t.goto((wdt * -0.5),(hgt * 0.5))
     t.goto((wdt * 0.5),(hgt * 0.5))
     t.goto((wdt * 0.5),(hgt * -0.3))
@@ -36,8 +45,7 @@ def setupRoom(t):
 
 def drawWindow(t, coordTuple, scale):
     '''Draws a window with 4 glass panes.'''
-    t.up()
-    t.goto(coordTuple)
+    setupTurtle(t, coordTuple=coordTuple, speed=0)
     glass = [(22.5*scale,22.5*scale), (22.5*scale,-22.5*scale), (-22.5*scale,22.5*scale), (-22.5*scale,-22.5*scale)]
     drawCentredSquare(t, scale, "brown")
     for i in glass:
@@ -49,17 +57,10 @@ def drawTree(t, scale, x, y):
     '''Draws the Christmas tree.'''
     #Calculates the multiplier needed for 1x scale to take up 90% of the screen height. 649 is the true height of the tree.
     scale = scale * ((t.screen.window_height() * 0.9) / 649)
-    t.speed(0) #DEBUG - MUST CHANGE
-
-    #Setup
-    t.width(5)
-    t.up()
-    t.goto(x,y)
-    t.down()
+    setupTurtle(t, "down", (x,y), width=5, speed=0, fillcolor=(102,26,26))
 
     #Trunk
     t.begin_fill()
-    t.fillcolor(102,26,26)
     t.fd(20*scale)
     t.lt(90)
     t.fd(60*scale)
@@ -105,10 +106,8 @@ def drawTree(t, scale, x, y):
 
 def drawCentredSquare(t, scale, color):
     '''Draws a square centred at the current position.'''
-    t.goto(t.pos() - (50*scale,50*scale))
-    t.down()
+    setupTurtle(t, "down", (t.pos() - (50*scale,50*scale)), fillcolor=color)
     t.begin_fill()
-    t.fillcolor(color)
     for i in range(4):
         t.fd(100*scale)
         t.lt(90)
@@ -150,23 +149,22 @@ def drawRibbon(t, scale, ribbon_color, bg_color):
 
 def drawNStar(t, number, length, color):
     middle = ((length/2) * tan(radians(180/number)))/2 #Finds vertical distance from start to middle
-    t.up()
-    t.goto(t.pos() + (-length/2,middle))
-    t.down()
+    setupTurtle(t, "down", (t.pos() + (-length/2,middle)), fillcolor=color)
     t.begin_fill()
-    t.fillcolor(color)
     for i in range(number):
         t.fd(length)
         t.rt(180-(180/number))
     t.end_fill()
+    setupTurtle(t) #Reset turtle
 
 def drawSpirograph(t, scale):
     t.width(3)
     t.down()
+    t.circle(50*scale)
     for i in range (6):
         for colours in ["red", "magenta", "blue", "cyan", "green", "yellow", "white"]:
             t.color(colours)
-            t.circle(50*scale)
+            
             t.lt(10)
     t.width(1)
     t.up()
@@ -276,7 +274,9 @@ def decorate(t):
                     t.turtlesize(5*scale,5*scale,1)
                     t.width(1)
                     t.fillcolor(box_color)
-                    stop = input("Move the ornament by clicking on the screen.\nType \"stop\" to remake the ornament or type any other key to confirm position: ")
+                    stop = input("Move the ornament by clicking on the screen.\nType \"back\" to remake the ornament or type any other key to confirm position: ")
+                    if stop == "back":
+                        break
                     
                     t.screen.onscreenclick(None)
                     t.shape("turtle")
@@ -305,7 +305,9 @@ def decorate(t):
                     t.fillcolor(color)
 
                     t.screen.onscreenclick(t.goto)
-                    stop = input("Move the ornament by clicking on the screen.\nType \"stop\" to remake the ornament or type any other key to confirm position: ")
+                    stop = input("Move the ornament by clicking on the screen.\nType \"back\" to remake the ornament or type any other key to confirm position: ")
+                    if stop == "back":
+                        break
                     t.screen.onscreenclick(None)
                     t.shape("turtle")
                     t.turtlesize(1,1,1)
@@ -319,7 +321,9 @@ def decorate(t):
                     t.turtlesize(10*scale,10*scale,1)
 
                     t.screen.onscreenclick(t.goto)
-                    stop = input("Move the ornament by clicking on the screen.\nType \"stop\" to remake the ornament or type any other key to confirm position: ")
+                    stop = input("Move the ornament by clicking on the screen.\nType \"back\" to remake the ornament or type any other key to confirm position: ")
+                    if stop == "back":
+                        break
                     t.screen.onscreenclick(None)
 
                     t.shape("turtle")
