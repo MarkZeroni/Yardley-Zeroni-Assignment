@@ -3,10 +3,6 @@
 
 #MZ high score: 151, 87 lines cleared
 
-#CHANGES TO BE MADE
-    #Optimise
-    #Remove debug code
-
 # Package imports
 import pygame
 import random
@@ -229,7 +225,7 @@ size = (size_x, size_y)
 pygame.init()   # Initialize the game engine
 screen = pygame.display.set_mode(size) # Defines size of the screen
 pygame.display.set_caption("Tetris - Yardley & Zeroni") # Renames window
-clock = pygame.time.Clock()
+clock = pygame.time.Clock() #Needed for consistent FPS
 
 done = False # Loop until the user clicks the close button.
 paused = False
