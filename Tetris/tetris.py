@@ -2,7 +2,6 @@
 #                       ******   Tetris   ******
 
 #MZ high score: 151, 87 lines cleared
-#Max lines of code: 407
 
 #CHANGES TO BE MADE
     #Optimise
@@ -24,8 +23,9 @@ colours = [
     (234, 0, 0),    #Red
 ]
 
-#Class for shape generation
 class Figure:
+    '''Generates a new shape, and can be used to get information about an already made shape.'''
+    #List of points in a 4x4 grid that correspond to shapes and their rotations
     figures = [
         [[4,5,6,7],[2,6,10,14],[8,9,10,11],[1,5,9,13]], #I tetromino (4 long shape)
         [[0,4,5,6],[2,1,5,9],[4,5,6,10],[1,5,9,8]],     #J tetromino
@@ -52,6 +52,7 @@ class Figure:
         self.rotation = (self.rotation + 1) % len(self.figures[self.type])  #floor division used to loop around
 
 class Tetris:
+    '''Generates the main game and contains many functions to manipulate shapes in the game.'''
     level = 1
     x = 160
     y = 60
@@ -64,27 +65,29 @@ class Tetris:
     def __init__(self, height, width):
         self.height = height
         self.width = width
-        self.field = []
+        self.field = [] #Contains all grid spaces and the currently placed piece in them.
         self.score = 0
         self.lines_cleared = 0
         self.state = "start"
         for i in range(height):
-            new_line = []
+            new_line = []   #Rows
             for j in range(width):
-                new_line.append(0)
+                new_line.append(0)  #Items in rows (initially nothing so all 0s)
             self.field.append(new_line)
 
     def new_figure(self):
+        '''Creates a new piece from the list of pieces. Destroys the prediction piece so that it can be regenerated for the new piece.'''
         global current, count, joined_list
         if count > 6:
-            joined_list = joined_list[7:] + random.sample(current, 7)
-            count = 0
+            joined_list = joined_list[7:] + random.sample(current, 7) #The list contains the next 14 figures, so that when all 7 types have been dropped,
+            count = 0                                                 #the next piece will still work.
         piece = joined_list[count]
         count += 1
         self.figure = Figure(3, 0, piece)
         self.prediction_figure = None
 
     def prediction_piece(self):
+        '''Generates a prediction piece at the location of and with the same rotation as the current piece. It then goes down until it intersects.'''
         self.prediction_figure = Figure(self.figure.x, self.figure.y, self.figure.type)
         self.prediction_figure.rotation = self.figure.rotation
         while not self.intersects(self.prediction_figure):
@@ -92,33 +95,39 @@ class Tetris:
         self.prediction_figure.y -= 1
 
     def next_piece(self):
+        '''Finds the next piece from the list and defines it as an object.'''
         global joined_list, count
         piece = joined_list[count]
         self.next_figure = Figure(12, 1, piece)
 
     def swap_held_piece(self):
-        if self.held_figure == None:
-            self.held_figure = Figure(-6, 1, self.figure.type)
-            self.new_figure()
-        else:
-            #Current type
-            held_type = self.held_figure.type
-            self.held_figure = Figure(-6, 1, self.figure.type)
-            self.figure = Figure(3, 0, held_type)
+        '''Swaps the current held piece with the current falling piece.'''
+        global swapped
+        if swapped == False: #Can only swap once per piece.
+            if self.held_figure == None:
+                self.held_figure = Figure(-6, 1, self.figure.type)
+                self.new_figure() #Can't swap if there is no piece to swap with.
+            else:
+                held_type = self.held_figure.type                   #Temporary storage of the held figure type.
+                self.held_figure = Figure(-6, 1, self.figure.type)  #Overwrites the held figure with the current figure in play.
+                self.figure = Figure(3, 0, held_type)               #Creates a new figure with the original held type.
+            swapped = True
 
     def intersects(self, figure):
+        '''Checks if the specified piece is intersecting a wall or placed pieces, and returns a boolean.'''
         intersection = False
         for i in range(4):      #i represents row
             for j in range(4):  #j represents column
                 if i * 4 + j in figure.image():                #numerical position in grid
                     if (i + figure.y >= self.height or         #All test if occupied grid position is out of bounds
-                            j + figure.x >= self.width or
+                            j + figure.x >= self.width or 
                             j + figure.x < 0 or
-                            self.field[i + figure.y][j + figure.x] > 0):
+                            self.field[i + figure.y][j + figure.x] > 0):    #Checks if piece intersects with already placed piece
                         intersection = True
         return intersection
 
     def break_lines(self):
+        '''Checks if there are any full lines. If there are, it deletes them and moves everything above down.'''
         lines = 0
         for i in range(1, self.height):     #Checks each row
             zeros = 0
@@ -129,32 +138,37 @@ class Tetris:
                 lines += 1
                 for k in range(i, 1, -1):
                     for j in range(self.width):
-                        self.field[k][j] = self.field[k - 1][j]
+                        self.field[k][j] = self.field[k - 1][j] #Moves lines above the now empty line down one, starting from the bottom.
         self.score += lines ** 2    #Clearing multiple lines at once gives a better score
         self.lines_cleared += lines
 
     def go_space(self):
+        '''Forces piece to go down instantly until it intersects, then it goes back up 1 and then freezes.'''
         while not self.intersects(self.figure):
             self.figure.y += 1
         self.figure.y -= 1
         self.freeze()
 
     def go_down(self):
+        '''Makes piece go down 1 square. If it then intersects, it goes back up and then freezes.'''
         self.figure.y += 1
         if self.intersects(self.figure):
             self.figure.y -= 1
             self.freeze()
 
     def freeze(self):
+        '''Converts the currently falling piece into a static object on the game grid.'''
+        global swapped
         for i in range(4):
             for j in range(4):
-                if i * 4 + j in self.figure.image():
-                    self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
-        self.break_lines()
+                if i * 4 + j in self.figure.image():                                     #For each square with the figure in it:
+                    self.field[i + self.figure.y][j + self.figure.x] = self.figure.color #The field array gets set to the color of the piece
+        self.break_lines()  #Checks if placed piece has caused a line to be filled.
         self.new_figure()
         self.next_piece()
-        if self.intersects(self.figure):
-            self.state = "gameover"
+        swapped = False     #Resets hold function to allow the next piece to be swapped.
+        if self.intersects(self.figure):    #If immediately after the new piece is created, it intersects,
+            self.state = "gameover"         #then the placed pieces have reached the top and the game is over.
 
     def go_side(self, dx):
         '''Moves shape dx squares to the right, stopping if it intersects with the boundries or another piece'''
@@ -172,6 +186,7 @@ class Tetris:
 
 #---------------DEFINITIONS---------------#
 def draw_figure(figure, width):
+    '''Draws the figure onto the screen. Width of 0 means a square is completely filled, and larger values correspond to the size of the outline of the square.'''
     if figure is not None: #Draw figure if it exists
         for i in range(4):
             for j in range(4):
@@ -183,6 +198,7 @@ def draw_figure(figure, width):
                                     game.zoom - 2, game.zoom - 2], width)
 
 def draw_text(text, font, color, x, y, anchor, outline):
+    '''Draws text onto the screen with a rectangle corner anchored at a specific co-ordinate, with the ability to create outlines.'''
     text_temp = font.render(text, True, WHITE)
     rect_temp = text_temp.get_rect()
     rect_temp.__setattr__(anchor, (x,y))
@@ -194,6 +210,7 @@ def draw_text(text, font, color, x, y, anchor, outline):
     screen.blit(text_temp, rect_temp)
 
 def draw_instructions(instructions_list):
+    '''Draws the list of instructions onto the screen, with each line being printed underneath the previous.'''
     start_y = 480
     j = 0
     for i in instructions_list:
@@ -217,6 +234,7 @@ clock = pygame.time.Clock()
 done = False # Loop until the user clicks the close button.
 paused = False
 pressing_down = False
+swapped = False
 
 fps = 60
 counter = 0     #Used for piece dropping speed
