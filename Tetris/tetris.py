@@ -1,6 +1,9 @@
 # HIT137 - Assignment 2 Keith Yardley & Mark Zeroni
 #                       ******   Tetris   ******
 
+#MZ high score: 151, 87 lines cleared
+#Max lines of code: 407
+
 #CHANGES TO BE MADE
     #High scores - Check if needed
     #Optimise
@@ -220,6 +223,17 @@ instructions_list = [
     "P pauses/unpauses the game."
     ]
 
+def draw_text(text, font, color, x, y, anchor, outline):
+    text_temp = font.render(text, True, WHITE)
+    rect_temp = text_temp.get_rect()
+    rect_temp.__setattr__(anchor, (x,y))
+    if outline == True:
+        outline_temp = font.render(text, True, BLACK)
+        x, y = rect_temp.topleft[0], rect_temp.topleft[1]
+        for i in [(x-2,y-2),(x+2,y-2),(x+2,y+2),(x-2,y+2)]: #Outline works by rendering 4 black versions of the text slightly offset from the centre.
+            screen.blit(outline_temp, i)
+    screen.blit(text_temp, rect_temp)
+
 def draw_instructions(instructions_list):
     start_y = 480
     j = 0
@@ -233,11 +247,7 @@ font_small = pygame.font.SysFont('Calibri', 16, True, False)
 font_med = pygame.font.SysFont('Calibri', 25, True, False)
 font_large = pygame.font.SysFont('Calibri', 65, True, False)
 
-paused_text_outline = font_large.render("PAUSED", True, BLACK)
-
-paused_text = font_large.render("PAUSED", True, WHITE)
-paused_text_rect = paused_text.get_rect(center=(size_x/2, size_y/2))
-top_left = paused_text_rect.topleft
+draw_text("PAUSED", font_large, WHITE, size_x/2, size_y/2, "center", True)
 
 while not done:
     for event in pygame.event.get():
@@ -352,54 +362,19 @@ while not done:
                                         game.zoom - 2, game.zoom - 2], 2)
 
     #---------------TEXT---------------
+        draw_text("SCORE: " + str(game.score), font_med, WHITE, 10, 10, "topleft", False)
+        draw_text("LINES: " + str(game.lines_cleared), font_med, WHITE, 510, 10, "topright", False)
+        draw_text("LEVEL: " + str(game.level), font_med, WHITE, size_x/2, 10, "midtop", False)
+        draw_text("HOLD", font_med, WHITE, 80, 150, "midtop", False)
+        draw_text("NEXT", font_med, WHITE, 440, 150, "midtop", False)
         draw_instructions(instructions_list)
-        
-        score = font_med.render("SCORE: " + str(game.score), True, WHITE)
-        screen.blit(score, [10, 10])
-        
-        lines = font_med.render("LINES: " + str(game.lines_cleared), True, WHITE)
-        lines_rect = lines.get_rect()
-        lines_rect.topright = (510,10)
-        screen.blit(lines, lines_rect)
 
-        levels = font_med.render("LEVEL: " + str(game.level), True, WHITE)
-        levels_rect = levels.get_rect()
-        levels_rect.midtop = (size_x/2, 10)
-        screen.blit(levels, levels_rect)
-
-        hold = font_med.render("HOLD", True, WHITE)
-        hold_rect = hold.get_rect()
-        hold_rect.midtop = (80, 150)
-        screen.blit(hold, hold_rect)
-
-        next = font_med.render("NEXT", True, WHITE)
-        next_rect = next.get_rect()
-        next_rect.midtop = (440, 150)
-        screen.blit(next, next_rect)
-
-        text_game_over = font_large.render("GAME OVER", True, WHITE)
-        text_game_over_outline = font_large.render("GAME OVER", True, BLACK)
-        text_game_over_rect = text_game_over.get_rect()
-        text_game_over_rect.midbottom = (size_x/2,(size_y/2)-10)
-        
-        text_game_over1 = font_large.render("Press ESC", True, WHITE)
-        text_game_over1_outline = font_large.render("Press ESC", True, BLACK)
-        text_game_over1_rect = text_game_over1.get_rect()
-        text_game_over1_rect.midtop = (size_x/2,(size_y/2)+10)
-        
         if game.state == "gameover":
-            for i in [(93-2,225-2),(93+2,225-2),(93+2,225+2),(93-2,225+2)]: #Outline works by rendering 4 black versions of the text slightly offset from the centre.
-                screen.blit(text_game_over_outline, i)
-            screen.blit(text_game_over, text_game_over_rect)                #Then the actual text is rendered on top of the outline.
-
-            for i in [(133-2,310-2),(133+2,310-2),(133+2,310+2),(133-2,310+2)]:
-                screen.blit(text_game_over1_outline, i)
-            screen.blit(text_game_over1, text_game_over1_rect)
+            draw_text("GAME OVER", font_large, font_large, size_x/2,(size_y/2)-10, "midbottom", True)
+            draw_text("Press ESC", font_large, font_large, size_x/2,(size_y/2)+10, "midtop", True)
 
         if paused == True:
-            for i in [(151-2,268-2),(151+2,268-2),(151+2,268+2),(151-2,268+2)]:
-                screen.blit(paused_text_outline, i)
-            screen.blit(paused_text, paused_text_rect)
+            draw_text("PAUSED", font_large, WHITE, size_x/2, size_y/2, "center", True)
 
         pygame.display.flip()
         clock.tick(fps)
